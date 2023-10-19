@@ -1,5 +1,48 @@
 ---
-- hosts: all
+- hosts: database
+  handlers:
+    - name: restart mysql
+      service:
+        name: mysql
+        state: restarted
+      become: yes  
+  tasks:
+    - name: 'Instala pacotes de dependencia dos sistema operacional'
+      apt:
+        name:                                
+        - mysql-server-5.6
+        - python-mysqldb
+        state: latest
+      become: yes
+    - name: 'Criando banco do MySQL'
+      mysql_db:
+        name: wordpress_db
+        login_user: root
+        state: present
+
+    - name: ' Cria o usuario do MySQL'
+      mysql_user:
+        login_user: root
+        name: wordpress_user
+        password: 12345
+        priv: 'wordpress_db.*:ALL'
+        state: present  
+        host: "{{ item }}"
+      with_items:
+        - 'localhost'
+        - '127.0.0.1'
+        - '192.168.56.82'  
+
+    - name: 'Confifgurar MySQL para aceitar conexoes remotas'    
+      copy:
+        src: 'files/my.cnf'
+        dest: '/etc/mysql/my.cnf'
+      become: yes
+      notify:
+        - restart mysql  
+
+
+- hosts: wordpress
   handlers:
     - name: restart apache
       service:
@@ -16,27 +59,11 @@
         - libapache2-mod-php5
         - php5-gd
         - libssh2-php
-        - php5-mcrypt
-        - mysql-server-5.6
-        - python-mysqldb
+        - php5-mcrypt        
         - php5-mysql  
         state: latest
       become: yes
-
-    - name: 'Criando banco do MySQL'
-      mysql_db:
-        name: wordpress_db
-        login_user: root
-        state: present
-
-    - name: ' Cria o usuario do MySQL'
-      mysql_user:
-        login_user: root
-        name: wordpress_user
-        password: 12345
-        priv: 'wordpress_db.*:ALL'
-        state: present  
-
+    
     - name: ' Baixa o arquivo de instalacao do Wordpress'
       get_url:
         url: 'https://wordpress.org/latest.tar.gz'
@@ -66,6 +93,8 @@
         - { regex: 'database_name_here', value: 'wordpress_db'}   
         - { regex: 'username_here', value: 'wordpress_user'}  
         - { regex: 'password_here', value: '12345'} 
+        - { regex: 'localhost', value: '192.168.56.82'} 
+        
       become: yes  
 
     - name: 'Configura Apache para servir o Wordpress'

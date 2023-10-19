@@ -23,6 +23,10 @@ Vagrant.configure("2") do |config|
   m.vm.network "private_network", ip: "192.168.56.80"
   end
 
+  config.vm.define "mysql" do |m|
+    m.vm.network "private_network", ip: "192.168.56.82"
+    end
+
 end
 
   # Disable automatic box update checking. If you disable this, then
